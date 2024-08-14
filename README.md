@@ -1,3 +1,17 @@
+This is a fork of Hbase v2.5.8
+The code has been modified to the FaaSKeeper Java library
+To build Hbase, Install JDK1.8 (ie Java 8), mvn and run:
+```bash
+mvn clean
+mvn clean install  -Denforcer.skip=true  -DskipTests assembly:single -e
+cd hbase-assembly/target
+tar xzvf hbase-2.5.8-bin.tar.gz
+cd hbase-2.5.8
+# Now you can run Hbase
+```
+
+
+
 <!--
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file

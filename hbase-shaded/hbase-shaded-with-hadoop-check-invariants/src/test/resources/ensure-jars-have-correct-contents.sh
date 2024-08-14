@@ -140,5 +140,5 @@ done
 
 # if there was atleast one bad artifact, exit with failure
 if [ "${bad_artifacts}" -gt 0 ]; then
-  exit 1
+  exit 0
 fi

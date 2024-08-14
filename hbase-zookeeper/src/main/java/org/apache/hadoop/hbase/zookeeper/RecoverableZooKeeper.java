@@ -49,6 +49,8 @@ import org.apache.zookeeper.proto.SetDataRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.spcl.faaskeeper.instrumentation.ByteBuddyLogger;
+
 /**
  * A zookeeper that can handle 'recoverable' errors. To handle recoverable errors, developers need
  * to realize that there are two classes of requests: idempotent and non-idempotent requests. Read
@@ -175,12 +177,20 @@ public class RecoverableZooKeeper {
   protected synchronized ZooKeeper checkZk() throws KeeperException {
     if (this.zk == null) {
       try {
-        this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
-      } catch (IOException ex) {
-        LOG.warn("Unable to create ZooKeeper Connection", ex);
+        // this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
+
+        Class<? extends ZooKeeper> loggedClass = ByteBuddyLogger.addLogging(ZooKeeper.class);
+        this.zk = loggedClass.getDeclaredConstructor(String.class, int.class, Watcher.class).newInstance(quorumServers, sessionTimeout, watcher);
+      // } 
+        // catch (IOException ex) {
+        // LOG.warn("Unable to create ZooKeeper Connection", ex);
+        // throw new KeeperException.OperationTimeoutException();
+      } catch (Exception ex) {
+        LOG.error("Unable to create Bytebuddy ZooKeeper class", ex);
+        ex.printStackTrace();
         throw new KeeperException.OperationTimeoutException();
       }
-    }
+    } 
     return zk;
   }
 

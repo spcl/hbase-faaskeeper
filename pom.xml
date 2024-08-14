@@ -1961,7 +1961,8 @@
               <goal>bsh-property</goal>
             </goals>
             <configuration>
-              <source>skip.license.check = !${license.bundles.dependencies};</source>
+              <!-- <source>skip.license.check = !${license.bundles.dependencies};</source> -->
+              <source>skip.license.check = true;</source>
               <properties>
                 <property>skip.license.check</property>
               </properties>

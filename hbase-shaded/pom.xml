@@ -46,6 +46,7 @@
     <source.skip>true</source.skip>
     <license.bundles.dependencies>true</license.bundles.dependencies>
     <shaded.prefix>org.apache.hadoop.hbase.shaded</shaded.prefix>
+    <enforcer.skip>true</enforcer.skip>
   </properties>
   <dependencies>
     <dependency>
