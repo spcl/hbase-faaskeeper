@@ -241,6 +241,8 @@ public final class ZKUtil {
       children = zkw.getRecoverableZooKeeper().getChildren(znode, null);
     } catch (KeeperException.NoNodeException nne) {
       return null;
+    } catch(KeeperException e) {
+      return null; 
     } catch (InterruptedException ie) {
       zkw.interruptedException(ie);
     }

@@ -131,7 +131,15 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
       List<String> children = ZKUtil.listChildrenNoWatch(zookeeper, peersZNode);
       return children != null ? children : Collections.emptyList();
     } catch (KeeperException e) {
-      throw new ReplicationException("Cannot get the list of peers", e);
+      System.out.println("Got Keeper Exception:");
+      e.printStackTrace();
+      return Collections.emptyList();
+      // throw new ReplicationException("Cannot get the list of peers", e);
+    } catch(Exception e) {
+      // throw new ReplicationException("Cannot get the list of peers", e);
+      System.out.println("Got Exception:");
+      e.printStackTrace();
+      return Collections.emptyList();
     }
   }
 
