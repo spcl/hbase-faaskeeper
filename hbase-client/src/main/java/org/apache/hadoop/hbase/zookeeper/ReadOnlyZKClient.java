@@ -37,11 +37,11 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.spcl.faaskeeper.FaasKeeperClient;
 /**
  * A very simple read only zookeeper implementation without watcher support.
  */
@@ -83,7 +83,7 @@ public final class ReadOnlyZKClient implements Closeable {
       return false;
     }
 
-    public void exec(ZooKeeper zk) {
+    public void exec(FaasKeeperClient zk) {
     }
 
     public void connectFailed(Exception e) {
@@ -115,7 +115,7 @@ public final class ReadOnlyZKClient implements Closeable {
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
-  ZooKeeper zookeeper;
+  FaasKeeperClient zookeeper;
 
   private int pendingRequests = 0;
 
@@ -160,11 +160,11 @@ public final class ReadOnlyZKClient implements Closeable {
       this.operationType = operationType;
     }
 
-    protected final void onComplete(ZooKeeper zk, int rc, T ret, boolean errorIfNoNode) {
+    protected final void onComplete(FaasKeeperClient zk, int rc, T ret, boolean errorIfNoNode) {
       tasks.add(new Task() {
 
         @Override
-        public void exec(ZooKeeper alwaysNull) {
+        public void exec(FaasKeeperClient alwaysNull) {
           pendingRequests--;
           Code code = Code.get(rc);
           if (code == Code.OK) {
@@ -180,12 +180,12 @@ public final class ReadOnlyZKClient implements Closeable {
           } else {
             if (code == Code.SESSIONEXPIRED) {
               LOG.warn("{} to {} session expired, close and reconnect", getId(), connectString);
-              try {
-                zk.close();
-              } catch (InterruptedException e) {
-                // Restore interrupt status
-                Thread.currentThread().interrupt();
-              }
+              // try {
+              zk.close();
+              // } catch (InterruptedException e) {
+              //   // Restore interrupt status
+              //   Thread.currentThread().interrupt();
+              // }
             }
             if (ZKTask.this.delay(retryIntervalMs, maxRetries)) {
               LOG.warn("{} to {} failed for {} of {}, code = {}, retries = {}", getId(),
@@ -217,10 +217,10 @@ public final class ReadOnlyZKClient implements Closeable {
       return true;
     }
 
-    protected abstract void doExec(ZooKeeper zk);
+    protected abstract void doExec(FaasKeeperClient zk);
 
     @Override
-    public final void exec(ZooKeeper zk) {
+    public final void exec(FaasKeeperClient zk) {
       pendingRequests++;
       doExec(zk);
     }
@@ -261,7 +261,7 @@ public final class ReadOnlyZKClient implements Closeable {
     tasks.add(new ZKTask<byte[]>(path, future, "get") {
 
       @Override
-      protected void doExec(ZooKeeper zk) {
+      protected void doExec(FaasKeeperClient zk) {
         zk.getData(path, false, (rc, path, ctx, data, stat) -> onComplete(zk, rc, data, true),
           null);
       }
@@ -277,7 +277,7 @@ public final class ReadOnlyZKClient implements Closeable {
     tasks.add(new ZKTask<Stat>(path, future, "exists") {
 
       @Override
-      protected void doExec(ZooKeeper zk) {
+      protected void doExec(FaasKeeperClient zk) {
         zk.exists(path, false, (rc, path, ctx, stat) -> onComplete(zk, rc, stat, false), null);
       }
     });
@@ -292,7 +292,7 @@ public final class ReadOnlyZKClient implements Closeable {
     tasks.add(new ZKTask<List<String>>(path, future, "list") {
 
       @Override
-      protected void doExec(ZooKeeper zk) {
+      protected void doExec(FaasKeeperClient zk) {
         zk.getChildren(path, false, (rc, path, ctx, children) -> onComplete(zk, rc, children, true),
           null);
       }
@@ -302,21 +302,39 @@ public final class ReadOnlyZKClient implements Closeable {
 
   private void closeZk() {
     if (zookeeper != null) {
-      try {
-        zookeeper.close();
-      } catch (InterruptedException e) {
-        // Restore interrupt status
-        Thread.currentThread().interrupt();
-      }
+      // try {
+      zookeeper.close();
+      // } catch (InterruptedException e) {
+      //   // Restore interrupt status
+      //   Thread.currentThread().interrupt();
+      // }
       zookeeper = null;
     }
   }
 
-  private ZooKeeper getZk() throws IOException {
+  private FaasKeeperClient getZk() throws IOException {
     // may be closed when session expired
     if (zookeeper == null || !zookeeper.getState().isAlive()) {
-      zookeeper = new ZooKeeper(connectString, sessionTimeoutMs, e -> {
-      });
+      try {
+        System.out.println("Initializing faaskeeper client...");
+        String filePath = System.getenv("FK_CONFIG_FILE_PATH");
+        zookeeper = FaasKeeperClient.buildClient(filePath, false, null);
+        zookeeper.start();
+      } catch (Exception ex) {
+          zookeeper = null;
+          LOG.error("Unable to create FaasKeeperClient", ex);
+          ex.printStackTrace();
+          throw new IOException("Failed to initialize faaskeeper client", ex);
+      }
+
+      // try {
+      //   Class<? extends FaasKeeperClient> loggedClass = ByteBuddyLogger.addLogging(FaasKeeperClient.class);
+      //   zookeeper = loggedClass.getDeclaredConstructor(String.class, int.class, Watcher.class).newInstance(connectString, sessionTimeoutMs, (Watcher) e -> {});
+      // } catch (Exception ex) {
+      //   LOG.error("Unable to create Bytebuddy FaasKeeperClient class", ex);
+      //   ex.printStackTrace();
+      //   throw new IOException("Failed to initialize faaskeeper client", ex);
+      // }
     }
     return zookeeper;
   }
@@ -343,7 +361,7 @@ public final class ReadOnlyZKClient implements Closeable {
       if (!task.needZk()) {
         task.exec(null);
       } else {
-        ZooKeeper zk;
+        FaasKeeperClient zk;
         try {
           zk = getZk();
         } catch (Exception e) {

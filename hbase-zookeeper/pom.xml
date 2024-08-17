@@ -30,13 +30,13 @@
   <name>Apache HBase - Zookeeper</name>
   <description>Zookeeper Helpers for HBase</description>
   <dependencies>
-    <!-- Local dependency add by me -->
+    <!-- Local dependency added by me -->
     <dependency>
       <groupId>org.spcl.faaskeeper</groupId>
       <artifactId>fkclient</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
-    <!-- Local dependency add by me end-->
+    <!-- Local dependency added by me end-->
 
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
